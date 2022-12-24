@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-const keydirFileRecSize = 26
+const keydirFileHdrSize = 26
 
 type KeydirRec struct {
 	FileId    string
@@ -17,7 +17,7 @@ type KeydirRec struct {
 // CompressKeyDirRec compresses the given data into a keydir file record.
 func CompressKeyDirRec(key string, rec KeydirRec) []byte {
 	keySize := len(key)
-	buff := make([]byte, keydirFileRecSize+keySize)
+	buff := make([]byte, keydirFileHdrSize+keySize)
 	fid, _ := strconv.ParseUint(rec.FileId, 10, 64)
 	binary.LittleEndian.PutUint64(buff, fid)
 	binary.LittleEndian.PutUint16(buff[8:], uint16(keySize))
@@ -44,5 +44,5 @@ func ExtractKeyDirRec(buff []byte) (string, KeydirRec, int) {
 		ValuePos:  valuePos,
 		ValueSize: valueSize,
 		TStamp:    int64(tStamp),
-	}, keydirFileRecSize + int(keySize)
+	}, keydirFileHdrSize + int(keySize)
 }

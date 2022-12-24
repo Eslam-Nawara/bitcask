@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 )
 
-const hintFileRecSize = 18
+const hintFileHdrSize = 18
 
 // type HintFileRec struct {
 // 	key       string
@@ -15,7 +15,7 @@ const hintFileRecSize = 18
 // }
 
 func CompressHintFileRec(key string, rec KeydirRec) []byte {
-	buff := make([]byte, hintFileRecSize+len(key))
+	buff := make([]byte, hintFileHdrSize+len(key))
 	binary.LittleEndian.PutUint64(buff, uint64(rec.TStamp))
 	binary.LittleEndian.PutUint16(buff[8:], uint16(len(key)))
 	binary.LittleEndian.PutUint32(buff[10:], rec.ValueSize)
@@ -29,11 +29,11 @@ func ExtractHintFileRec(buff []byte) (string, KeydirRec, int) {
 	keySize := binary.LittleEndian.Uint16(buff[8:])
 	valueSize := binary.LittleEndian.Uint32(buff[10:])
 	valuePos := binary.LittleEndian.Uint32(buff[14:])
-	key := string(buff[hintFileRecSize : hintFileRecSize+keySize])
+	key := string(buff[hintFileHdrSize : hintFileHdrSize+keySize])
 
 	return key, KeydirRec{
 		ValuePos:  valuePos,
 		ValueSize: valueSize,
 		TStamp:    int64(tStamp),
-	}, hintFileRecSize + int(keySize)
+	}, hintFileHdrSize + int(keySize)
 }
