@@ -1,9 +1,11 @@
 package keydir
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/Eslam-Nawara/bitcask/internal/recfmt"
 	"github.com/Eslam-Nawara/bitcask/internal/sio"
@@ -19,6 +21,8 @@ type (
 const (
 	keyDirFile                 = "keydir"
 	SharedKeyDir KeyDirPrivacy = 1
+	data         fileType      = 0
+	hint         fileType      = 1
 )
 
 func New(dataStorePath string, privacy KeyDirPrivacy) (KeyDir, error) {
@@ -117,24 +121,102 @@ func (keyDir KeyDir) share(dataStorePath string) error {
 }
 
 func isOld(dataStorePath string) (bool, error) {
-	return false, nil
+	dataStoreStat, err := os.Stat(dataStorePath)
+	if err != nil {
+		return false, err
+	}
+
+	keydirStat, err := os.Stat(path.Join(dataStorePath, "keydir"))
+	if err != nil {
+		return false, err
+	}
+
+	return keydirStat.ModTime().Before(dataStoreStat.ModTime()), nil
 }
 
-func (k KeyDir) parseFiles(dataStorePath string, files map[string]fileType) error {
+func (keyDir KeyDir) parseFiles(dataStorePath string, files map[string]fileType) error {
+	for FileName, fType := range files {
+		switch fType {
+		case data:
+			err := keyDir.parseDataFile(dataStorePath, FileName)
+			if err != nil {
+				return err
+			}
+		case hint:
+			err := keyDir.parseHintFile(dataStorePath, FileName)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
-func (k KeyDir) parseDataFile(dataStorePath, name string) error {
+func (keyDir KeyDir) parseDataFile(dataStorePath, fileName string) error {
+	data, err := os.ReadFile(path.Join(dataStorePath, fileName))
+	if err != nil {
+		return err
+	}
+
+	n := len(data)
+	for i := 1; i < n; {
+		rec, recLen, err := recfmt.ExtractDataFileRec(data[i:])
+		if err != nil {
+			return err
+		}
+
+		old, exists := keyDir[rec.Key]
+		if !exists || old.TStamp < rec.TStamp {
+			keyDir[rec.Key] = recfmt.KeydirRec{
+				FileId:    fileName,
+				ValuePos:  uint32(i),
+				ValueSize: rec.ValueSize,
+				TStamp:    rec.TStamp,
+			}
+		}
+		i += int(recLen)
+	}
+
 	return nil
 }
 
-// parseHintFile parses the data from hint files.
-// return and error on system failures.
-func (k KeyDir) parseHintFile(dataStorePath, name string) error {
+func (keyDir KeyDir) parseHintFile(dataStorePath, fileName string) error {
+	data, err := os.ReadFile(path.Join(dataStorePath, fileName))
+	if err != nil {
+		return err
+	}
+
+	n := len(data)
+	for i := 0; i < n; {
+		key, rec, recLen := recfmt.ExtractHintFileRec(data[i:])
+		rec.FileId = fmt.Sprintf("%s.data", strings.Trim(fileName, ".hint"))
+		keyDir[key] = rec
+		i += recLen
+	}
+
 	return nil
 }
 
-// categorizeFiles specifies whether the file is data or hint file.
 func categorizeFiles(allFiles []string) map[string]fileType {
-	return nil
+	res := make(map[string]fileType)
+
+	hintFiles := make(map[string]int)
+	for _, file := range allFiles {
+		if strings.HasSuffix(file, ".hint") {
+			fileWithoutExt := strings.Trim(file, ".hint")
+			hintFiles[fileWithoutExt] = 1
+			res[file] = hint
+		}
+	}
+
+	for _, file := range allFiles {
+		if strings.HasSuffix(file, ".data") {
+			if _, okay := hintFiles[strings.Trim(file, ".data")]; !okay {
+				res[file] = data
+			}
+		}
+	}
+
+	return res
 }
