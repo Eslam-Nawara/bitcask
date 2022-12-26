@@ -15,7 +15,7 @@ type (
 	KeyDirPrivacy int
 
 	fileType int
-	KeyDir   map[string]recfmt.KeydirRec
+	KeyDir   map[string]recfmt.KeyDirRec
 )
 
 const (
@@ -168,7 +168,7 @@ func (keyDir KeyDir) parseDataFile(dataStorePath, fileName string) error {
 
 		old, exists := keyDir[rec.Key]
 		if !exists || old.TStamp < rec.TStamp {
-			keyDir[rec.Key] = recfmt.KeydirRec{
+			keyDir[rec.Key] = recfmt.KeyDirRec{
 				FileId:    fileName,
 				ValuePos:  uint32(i),
 				ValueSize: rec.ValueSize,

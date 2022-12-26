@@ -7,7 +7,7 @@ import (
 
 const keydirFileHdrSize = 26
 
-type KeydirRec struct {
+type KeyDirRec struct {
 	FileId    string
 	ValuePos  uint32
 	ValueSize uint32
@@ -15,7 +15,7 @@ type KeydirRec struct {
 }
 
 // CompressKeyDirRec compresses the given data into a keydir file record.
-func CompressKeyDirRec(key string, rec KeydirRec) []byte {
+func CompressKeyDirRec(key string, rec KeyDirRec) []byte {
 	keySize := len(key)
 	buff := make([]byte, keydirFileHdrSize+keySize)
 	fid, _ := strconv.ParseUint(rec.FileId, 10, 64)
@@ -31,7 +31,7 @@ func CompressKeyDirRec(key string, rec KeydirRec) []byte {
 
 // ExtractKeyDirRec extracts the keydir file record into a keydir record.
 // Return the keydir record and its length in the file.
-func ExtractKeyDirRec(buff []byte) (string, KeydirRec, int) {
+func ExtractKeyDirRec(buff []byte) (string, KeyDirRec, int) {
 	fileId := strconv.FormatUint(binary.LittleEndian.Uint64(buff), 10)
 	keySize := binary.LittleEndian.Uint16(buff[8:])
 	valueSize := binary.LittleEndian.Uint32(buff[10:])
@@ -39,7 +39,7 @@ func ExtractKeyDirRec(buff []byte) (string, KeydirRec, int) {
 	tStamp := binary.LittleEndian.Uint64(buff[18:])
 	key := string(buff[26 : keySize+26])
 
-	return key, KeydirRec{
+	return key, KeyDirRec{
 		FileId:    fileId,
 		ValuePos:  valuePos,
 		ValueSize: valueSize,

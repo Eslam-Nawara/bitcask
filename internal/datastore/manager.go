@@ -59,12 +59,13 @@ func NewDataStore(dataStorePath string, mode LockMode) (*DataStore, error) {
 
 	if dirErr == nil {
 		acquired, err := datastore.openDataStoreDir()
-		if !acquired {
-			err = errAccessDenied
-		}
 		if err != nil {
 			return nil, err
 		}
+		if !acquired {
+			return nil, errAccessDenied
+		}
+
 	} else if mode == ExclusiveLock {
 		err := datastore.createDataStoreDir()
 		if err != nil {
