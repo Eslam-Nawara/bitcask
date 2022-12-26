@@ -1,6 +1,11 @@
 package datastore
 
 import (
+	"fmt"
+	"os"
+	"path"
+	"time"
+
 	"github.com/Eslam-Nawara/bitcask/internal/recfmt"
 	"github.com/Eslam-Nawara/bitcask/internal/sio"
 )
@@ -54,7 +59,13 @@ func (appendFile *AppendFile) WriteData(key, value string, tStamp int64) (int, e
 	return writePos, nil
 }
 
-func (a *AppendFile) WriteHint(key string, rec recfmt.KeyDirRec) error {
+func (appendFile *AppendFile) WriteHint(key string, rec recfmt.KeyDirRec) error {
+	buff := recfmt.CompressHintFileRec(key, rec)
+	_, err := appendFile.hintWrapper.Write(buff)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -82,6 +93,42 @@ func (appendFile *AppendFile) Close() {
 	}
 }
 
-func (a *AppendFile) newAppendFile() error {
+func (appendFile *AppendFile) newAppendFile() error {
+	if appendFile.fileWrapper != nil {
+		err := appendFile.fileWrapper.File.Close()
+		if err != nil {
+			return err
+		}
+		if appendFile.appendType == Merge {
+			err := appendFile.hintWrapper.File.Close()
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	tStamp := time.Now().UnixMicro()
+	fileName := fmt.Sprintf("%d.data", tStamp)
+	file, err := sio.OpenFile(path.Join(appendFile.filePath, fileName),
+		appendFile.fileFlags, os.FileMode(0666))
+	if err != nil {
+		return err
+	}
+
+	if appendFile.appendType == Merge {
+		hintName := fmt.Sprintf("%d.hint", tStamp)
+		hint, err := sio.OpenFile(path.Join(appendFile.filePath, hintName),
+			appendFile.fileFlags, os.FileMode(0666))
+		if err != nil {
+			return err
+		}
+		appendFile.hintWrapper = hint
+	}
+
+	appendFile.fileWrapper = file
+	appendFile.fileName = fileName
+	appendFile.currentPos = 0
+	appendFile.currentSize = 0
+
 	return nil
 }
