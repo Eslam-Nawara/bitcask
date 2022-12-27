@@ -11,21 +11,34 @@ import (
 	"github.com/Eslam-Nawara/bitcask/internal/sio"
 )
 
+const (
+	// PrivateKeyDir specifies that the keydir is owned by a writer process and will not be shared.
+	PrivateKeyDir KeyDirPrivacy = 0
+	// SharedKeyDir specifies that the keydir is owned by a reader proccess and will
+	// available writers to used it instead of parsing the whole datastore files.
+	SharedKeyDir KeyDirPrivacy = 1
+
+	// keyDirFile is the name of the file used to share the keydir map.
+	keyDirFile = "keydir"
+
+	// data represents that the file is a data file.
+	data fileType = 0
+	// hint represents that the file is a hint file.
+	hint fileType = 1
+)
+
 type (
+	// fileType specifies whether the file is a data or hint file.
+	fileType int
+
+	// KeyDirPrivacy specifies whether the keydir is private or shared.
 	KeyDirPrivacy int
 
-	fileType int
-	KeyDir   map[string]recfmt.KeyDirRec
+	// KeyDir represents the map used by the bitcask.
+	KeyDir map[string]recfmt.KeyDirRec
 )
 
-const (
-	keyDirFile                 = "keydir"
-	SharedKeyDir KeyDirPrivacy = 1
-	data         fileType      = 0
-	hint         fileType      = 1
-)
-
-func New(dataStorePath string, privacy KeyDirPrivacy) (KeyDir, error) {
+func NewKeyDir(dataStorePath string, privacy KeyDirPrivacy) (KeyDir, error) {
 	keyDir := KeyDir{}
 
 	okay, err := keyDir.buildFromKeydirFile(dataStorePath)
