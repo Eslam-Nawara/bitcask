@@ -53,10 +53,10 @@ type (
 )
 
 func Open(dataStorePath string, opts ...ConfigOpt) (*Bitcask, error) {
-	b := &Bitcask{}
-	b.usrOpts = parseUsrOpts(opts)
+	bitcask := &Bitcask{}
+	bitcask.usrOpts = parseUsrOpts(opts)
 
-	privacy, lockMode := b.setPermessions(dataStorePath)
+	privacy, lockMode := bitcask.setPermessions(dataStorePath)
 
 	dataStore, err := datastore.NewDataStore(dataStorePath, lockMode)
 	if err != nil {
@@ -68,32 +68,32 @@ func Open(dataStorePath string, opts ...ConfigOpt) (*Bitcask, error) {
 		return nil, err
 	}
 
-	b.dataStore = dataStore
-	b.keyDir = keyDir
+	bitcask.dataStore = dataStore
+	bitcask.keyDir = keyDir
 
-	return b, nil
+	return bitcask, nil
 }
 
-func (b *Bitcask) Get(key string) (string, error) {
+func (bitcask *Bitcask) Get(key string) (string, error) {
 	var value string
 	var err error
 
-	if b.readerCnt == 0 {
-		b.accessMu.Lock()
+	if bitcask.readerCnt == 0 {
+		bitcask.accessMu.Lock()
 	}
-	atomic.AddInt32(&b.readerCnt, 1)
+	atomic.AddInt32(&bitcask.readerCnt, 1)
 
-	rec, isExist := b.keyDir[key]
+	rec, isExist := bitcask.keyDir[key]
 	if !isExist {
 		value = ""
 		err = fmt.Errorf("%s: %s", key, datastore.ErrKeyNotExist)
 	} else {
-		value, err = b.dataStore.ReadValueFromFile(rec.FileId, key, rec.ValuePos, rec.ValueSize)
+		value, err = bitcask.dataStore.ReadValueFromFile(rec.FileId, key, rec.ValuePos, rec.ValueSize)
 	}
 
-	atomic.AddInt32(&b.readerCnt, -1)
-	if b.readerCnt == 0 {
-		b.accessMu.Unlock()
+	atomic.AddInt32(&bitcask.readerCnt, -1)
+	if bitcask.readerCnt == 0 {
+		bitcask.accessMu.Unlock()
 	}
 
 	return value, err

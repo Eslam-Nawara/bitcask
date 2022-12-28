@@ -173,7 +173,7 @@ func (keyDir KeyDir) parseDataFile(dataStorePath, fileName string) error {
 	}
 
 	n := len(data)
-	for i := 1; i < n; {
+	for i := 0; i < n; {
 		rec, recLen, err := recfmt.ExtractDataFileRec(data[i:])
 		if err != nil {
 			return err
