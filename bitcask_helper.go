@@ -104,7 +104,6 @@ func (bitcask *Bitcask) mergeWrite(mergeFile *datastore.AppendFile, key string) 
 	if err != nil {
 		return recfmt.KeyDirRec{}, err
 	}
-
 	return newRec, nil
 }
 

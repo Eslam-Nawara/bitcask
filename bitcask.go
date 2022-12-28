@@ -173,7 +173,6 @@ func (bitcask *Bitcask) Fold(fn func(string, string, any) any, acc any) any {
 	if bitcask.readerCnt == 0 {
 		bitcask.accessMu.Unlock()
 	}
-
 	return acc
 }
 
